@@ -26,8 +26,9 @@ export function Welcome({
           </p>
           <p className="honest">
             This web slice is not LiDAR scanning and not a live retailer AR SDK.
-            It is the taste-and-suggestion layer: open a room photo, set how you
-            want to live, and compose a store look you can later walk in AR.
+            It is the taste-and-suggestion layer plus a spatial PREVIEW: open a
+            room photo, set how you want to live, and walk a staged look you can
+            later take into real AR.
           </p>
           <div className="hero-actions">
             <button className="btn" onClick={onStart}>
@@ -54,18 +55,18 @@ export function Welcome({
           <article>
             <p className="eyebrow">03</p>
             <h3>Walk</h3>
-            <p>AR from real retailers is next. Here you swap, restyle, and rearrange.</p>
+            <p>AR from real retailers is next. Here you swap, restyle, rearrange, and preview a first-person pass.</p>
           </article>
         </div>
       </div>
       <div className="hero-visual">
         <img src="/rooms/gallery-living.jpg" alt="A sunlit living room sample" />
         <div className="hero-caption">
-          <p className="eyebrow">Coming next</p>
-          <strong>AR walkthrough with store-true models</strong>
+          <p className="eyebrow">Now in this slice</p>
+          <strong>PREVIEW walkthrough — not live AR</strong>
           <p>
-            Not wired in this build. The pins you place here are the composition
-            pass before you walk the room.
+            Walk a first-person pass through the staged room. Retailer models
+            and live AR SDKs are still not wired.
           </p>
         </div>
       </div>

@@ -9,28 +9,29 @@ Velora Studio is a home design product. The long-term loop is:
 3. **Place** AR furniture from retailers that already ship AR models (Ashley, Amazon, Kirkland’s, and similar).
 4. **Walk** the composed look in AR, then swap styles and rearrange pieces in-app.
 
-## What this first slice is
+## What this slice is
 
-This repository is the **design brain** on the web — the taste, suggestion, and composition layer.
+This repository is the **design brain** on the web — the taste, suggestion, spatial layout, and preview layer.
 
 A first-time user can:
 
 - Open a room from a **photo upload** or a **sample interior** (stand-in for a future 3D scan).
-- Pick a **theme, style, color palette, and living notes**. Those pickers change the furniture suggestions.
-- See **mocked retailer product cards** (Ashley, Amazon, Kirkland’s) with name, store, price, style tags, and an **AR-capable** mark.
-- **Swap, rotate, resize, and rearrange** suggested placements on the room photo.
+- Pick a **room type, theme, style, color palette, and living notes**. Those pickers change the furniture suggestions.
+- See **mocked retailer product cards** (Ashley, Amazon, Kirkland’s) ranked for the current room and look, with match reasons.
+- Rearrange **3D furniture in a spatial room** that uses the photo as the far-wall scan stand-in. Palette lighting tints the room.
+- Play a **PREVIEW walkthrough** — a first-person camera pass through the staged room. It is labeled as preview, not live AR.
 - Keep the look in **localStorage** on this device. No account, no backend.
 
 ## What this is not
 
-This pull request does **not** include:
+This app does **not** include:
 
 - Real LiDAR / room scanning
 - Live Ashley, Amazon, or Kirkland’s AR SDKs or store checkout
 - Photoreal in-room AR rendering
 - Accounts, cloud sync, or a backend
 
-A “preview walkthrough” in the UI is a composition pass over the photo, labeled as such — not a live AR session.
+The walkthrough is a composition preview over a simple 3D layout — not a live AR session.
 
 ## Run locally
 
@@ -52,6 +53,6 @@ The production build is a static site. Designs persist in the browser via `local
 
 ## Stack
 
-Vite, React 19, and TypeScript. Client-only.
+Vite, React 19, TypeScript, and Three.js (via React Three Fiber). Client-only.
 
 Sample interiors are bundled under `public/rooms/` (Unsplash photographs, used as scan stand-ins).

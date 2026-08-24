@@ -14,9 +14,11 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
     : undefined;
 
   const items = useMemo(() => {
-    return studio.ranked.filter((product) =>
-      retailer === "All" ? true : product.retailer === retailer,
+    const byStore = studio.ranked.filter((entry) =>
+      retailer === "All" ? true : entry.product.retailer === retailer,
     );
+    const matched = byStore.filter((entry) => entry.score >= 8);
+    return matched.length > 0 ? matched : byStore;
   }, [studio.ranked, retailer]);
 
   return (
@@ -24,13 +26,13 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
       <p className="eyebrow">Step three · Catalog</p>
       <h2>Store furniture</h2>
       <p className="muted">
-        Mocked Ashley, Amazon, and Kirkland&apos;s pieces with AR-ready cards.
-        Live store SDKs are not connected.
+        Mocked Ashley, Amazon, and Kirkland&apos;s pieces ranked for this room
+        and look. Live store SDKs are not connected.
       </p>
 
       {selectedProduct && studio.selected ? (
         <div className="inspector">
-          <p className="eyebrow">Selected on the photo</p>
+          <p className="eyebrow">Selected in the room</p>
           <h3>{selectedProduct.name}</h3>
           <div className="meta-row">
             <span>
@@ -87,8 +89,8 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
         </div>
       ) : (
         <p className="empty">
-          Select a pin to rotate, resize, or swap it. Choosing a card places or
-          replaces a piece.
+          Select a piece to rotate, resize, or swap it. Choosing a card places or
+          replaces furniture in the room.
         </p>
       )}
 
@@ -115,17 +117,14 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
           ) : null}
         </div>
         <div className="product-list">
-          {items.map((product) => (
+          {items.map(({ product, reasons }) => (
             <button
               key={product.id}
               className={`product-card ${selectedProduct?.id === product.id ? "active" : ""}`}
               onClick={() => studio.swapProduct(product)}
             >
               <span className="thumb" style={{ background: `${product.swatch}33` }}>
-                <FurnitureGlyph
-                  product={product}
-                  className="glyph"
-                />
+                <FurnitureGlyph product={product} className="glyph" />
               </span>
               <span>
                 <b>{product.name}</b>
@@ -134,6 +133,11 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
                   {" · "}
                   {product.arCapable ? "AR-capable" : "No AR model"}
                 </small>
+                {reasons.length > 0 ? (
+                  <small className="match-line">
+                    {reasons.slice(0, 3).join(" · ")}
+                  </small>
+                ) : null}
               </span>
               <span className="price">{money(product.price)}</span>
             </button>

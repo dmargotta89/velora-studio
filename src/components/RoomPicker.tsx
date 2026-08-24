@@ -1,8 +1,11 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { sampleRooms } from "../data/rooms";
 import { fileToRoomDataUrl } from "../lib/image";
 import { uid } from "../lib/ids";
-import type { Room } from "../types";
+import { roomKindLabels } from "../lib/labels";
+import type { Room, RoomKind } from "../types";
+
+const kinds: RoomKind[] = ["living", "dining", "bedroom", "study"];
 
 export function RoomPicker({
   onPick,
@@ -12,6 +15,7 @@ export function RoomPicker({
   onBack: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [kind, setKind] = useState<RoomKind>("living");
 
   async function onUpload(file: File | undefined) {
     if (!file) return;
@@ -20,7 +24,7 @@ export function RoomPicker({
       onPick({
         id: uid("room"),
         name: file.name.replace(/\.[^.]+$/, "") || "Your room",
-        kind: "living",
+        kind,
         imageSrc,
         source: "upload",
         note: "Your photo stands in for a future 3D scan of this room.",
@@ -50,6 +54,21 @@ export function RoomPicker({
           Back
         </button>
       </div>
+      <div className="chip-row" style={{ marginBottom: "1rem" }}>
+        {kinds.map((item) => (
+          <button
+            key={item}
+            className={`chip ${kind === item ? "active" : ""}`}
+            onClick={() => setKind(item)}
+          >
+            <strong>{roomKindLabels[item]}</strong>
+          </button>
+        ))}
+      </div>
+      <p className="muted" style={{ marginBottom: "0.9rem" }}>
+        Room type is used for uploaded photos so the mocked catalog can stay
+        relevant. Sample interiors are living rooms.
+      </p>
       <div className="room-grid">
         <label className="upload-card">
           <input

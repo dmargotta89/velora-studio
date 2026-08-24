@@ -1,140 +1,61 @@
-import { useRef, useState, type PointerEvent } from "react";
+import { lazy, Suspense, useState } from "react";
 import { money } from "../lib/ids";
 import { lookSummary } from "../lib/suggest";
 import type { StudioModel } from "../lib/useStudio";
-import { FurnitureGlyph } from "./FurnitureGlyph";
+
+const SpatialStage = lazy(async () => {
+  const mod = await import("./SpatialStage");
+  return { default: mod.SpatialStage };
+});
 
 export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const room = studio.state.room;
-  const stageRef = useRef<HTMLDivElement>(null);
-  const [dragId, setDragId] = useState<string | null>(null);
   const [walkIndex, setWalkIndex] = useState(0);
-  const [hintOpen, setHintOpen] = useState(true);
 
   if (!room) return null;
 
-  function pointToPercent(event: PointerEvent<HTMLDivElement>) {
-    const box = stageRef.current?.getBoundingClientRect();
-    if (!box) return { x: 50, y: 50 };
-    return {
-      x: ((event.clientX - box.left) / box.width) * 100,
-      y: ((event.clientY - box.top) / box.height) * 100,
-    };
-  }
-
-  function onPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!dragId) return;
-    const next = pointToPercent(event);
-    studio.movePlacement(dragId, next.x, next.y);
-  }
-
   const walkItem = studio.placedProducts[walkIndex];
+  const count = studio.placedProducts.length;
 
   return (
     <div className="canvas-wrap">
-      <div
-        ref={stageRef}
-        className="canvas"
-        onPointerMove={onPointerMove}
-        onPointerUp={() => setDragId(null)}
-        onPointerLeave={() => setDragId(null)}
-        onClick={() => studio.selectPlacement(null)}
-      >
-        <img className="room-photo" src={room.imageSrc} alt={room.name} />
-        {hintOpen ? (
-          <div className="canvas-hint">
-            Suggested placements sit on the photo like an AR pass. Drag to
-            rearrange. Click a piece to swap it from the store catalog.
-            <button
-              className="hint-dismiss"
-              onClick={(event) => {
-                event.stopPropagation();
-                setHintOpen(false);
-              }}
-            >
-              Got it
-            </button>
-          </div>
-        ) : null}
-        {studio.placedProducts.map(({ placement, product }) => {
-          const walking =
-            studio.walkthrough && walkItem?.placement.id === placement.id;
-          const selected =
-            studio.state.selectedId === placement.id || Boolean(walking);
-          return (
-            <button
-              key={placement.id}
-              className={`mark ${placement.slot} ${selected ? "selected" : ""}`}
-              style={{
-                left: `${placement.x}%`,
-                top: `${placement.y}%`,
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                studio.selectPlacement(placement.id);
-                setHintOpen(false);
-              }}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                studio.selectPlacement(placement.id);
-                setHintOpen(false);
-                setDragId(placement.id);
-              }}
-            >
-              <span
-                className="glyph-wrap"
-                style={{
-                  transform: `rotate(${placement.rotation}deg) scale(${placement.scale})`,
-                }}
-              >
-                <FurnitureGlyph product={product} />
-              </span>
-              <span className="mark-card">
-                <b>{product.name}</b>
-                <small>
-                  <i className={`ar-dot ${product.arCapable ? "" : "off"}`} />
-                  {product.retailer} · {money(product.price)} ·{" "}
-                  {product.arCapable ? "AR model" : "Photo only"}
-                </small>
-              </span>
-            </button>
-          );
-        })}
-
+      <div className="canvas spatial-canvas">
+        <Suspense fallback={<div className="spatial-fallback">Building the room…</div>}>
+          <SpatialStage studio={studio} walkIndex={walkIndex} />
+        </Suspense>
+        <div className="preview-badge">
+          <span>PREVIEW</span>
+          Spatial walkthrough of a photo-based room — not live AR, not a LiDAR scan
+        </div>
         {studio.walkthrough && walkItem ? (
-          <div
-            className="walkthrough"
-            onClick={() => studio.setWalkthrough(false)}
-          >
-            <div
-              className="walk-card"
-              onClick={(event) => event.stopPropagation()}
-            >
+          <div className="walkthrough" onClick={() => studio.setWalkthrough(false)}>
+            <div className="walk-card" onClick={(event) => event.stopPropagation()}>
               <button
                 className="walk-close"
                 onClick={() => studio.setWalkthrough(false)}
-                aria-label="Close walkthrough"
+                aria-label="Close preview walkthrough"
               >
                 Close
               </button>
-              <p className="eyebrow">Look walkthrough · preview</p>
+              <p className="eyebrow">PREVIEW walkthrough · not live AR</p>
+              <p className="walk-count">
+                Piece {walkIndex + 1} of {count}
+              </p>
               <h2>{walkItem.product.name}</h2>
               <p>
-                In the full product you walk this composition in AR with the
-                retailer&apos;s model. This pass is the design brain only —{" "}
-                {walkItem.product.retailer}, {money(walkItem.product.price)},{" "}
+                First-person pass through the staged room. In the full product you
+                walk this look with the retailer&apos;s AR model. This camera path
+                is a preview only — {walkItem.product.retailer},{" "}
+                {money(walkItem.product.price)},{" "}
                 {walkItem.product.arCapable
-                  ? "already marked AR-capable."
+                  ? "mocked as AR-capable."
                   : "photo reference, no AR model yet."}
               </p>
               <div className="walk-actions">
                 <button
                   className="btn small"
                   onClick={() =>
-                    setWalkIndex((index) =>
-                      index === 0 ? studio.placedProducts.length - 1 : index - 1,
-                    )
+                    setWalkIndex((index) => (index === 0 ? count - 1 : index - 1))
                   }
                 >
                   Previous
@@ -142,9 +63,7 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
                 <button
                   className="btn small"
                   onClick={() =>
-                    setWalkIndex((index) =>
-                      index === studio.placedProducts.length - 1 ? 0 : index + 1,
-                    )
+                    setWalkIndex((index) => (index === count - 1 ? 0 : index + 1))
                   }
                 >
                   Next piece

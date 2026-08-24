@@ -1,17 +1,38 @@
 import { features, palettes, styles, themes } from "../data/taste";
+import { roomKindLabels } from "../lib/labels";
 import type { StudioModel } from "../lib/useStudio";
+import type { RoomKind } from "../types";
+
+const kinds: RoomKind[] = ["living", "dining", "bedroom", "study"];
 
 export function TasteRail({ studio }: { studio: StudioModel }) {
-  const { taste } = studio.state;
+  const { taste, room } = studio.state;
 
   return (
     <aside className="rail">
       <p className="eyebrow">Step two · Taste</p>
       <h2>How should it feel?</h2>
       <p className="muted">
-        These pickers change the retailer suggestions on the photo. Nothing here
+        These pickers change the retailer suggestions in the room. Nothing here
         is decorative-only.
       </p>
+
+      {room ? (
+        <div className="section">
+          <h3>This room is</h3>
+          <div className="chip-row">
+            {kinds.map((kind) => (
+              <button
+                key={kind}
+                className={`chip ${room.kind === kind ? "active" : ""}`}
+                onClick={() => studio.setRoomKind(kind)}
+              >
+                <strong>{roomKindLabels[kind]}</strong>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="section">
         <h3>Theme</h3>
