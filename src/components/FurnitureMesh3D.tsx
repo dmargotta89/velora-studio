@@ -143,10 +143,9 @@ export function FurnitureMesh3D({
               color={fill}
               roughness={0.6}
               emissive={fill}
-              emissiveIntensity={0.35 + glow}
+              emissiveIntensity={0.55 + glow}
             />
           </mesh>
-          <pointLight position={[0, 1.25, 0]} intensity={0.45} distance={3.5} color={fill} />
         </>
       )}
       {product.category === "plant" && (

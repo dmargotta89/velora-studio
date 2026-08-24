@@ -1,15 +1,22 @@
 import { ContactShadows, Html, OrbitControls, useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { paletteAtmosphere, percentToWorld, worldToPercent } from "../lib/spatial";
 import type { StudioModel } from "../lib/useStudio";
 import type { PaletteId, Placement, Product } from "../types";
 import { FurnitureMesh3D } from "./FurnitureMesh3D";
 
+const HOME_POS = new THREE.Vector3(0.8, 1.55, 3.7);
+const HOME_LOOK = new THREE.Vector3(0, 0.7, -0.8);
+
 function ScanWall({ src }: { src: string }) {
   const texture = useTexture(src);
-  texture.colorSpace = THREE.SRGBColorSpace;
+  useLayoutEffect(() => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
+  }, [texture]);
   return (
     <mesh position={[0, 1.62, -3.28]} receiveShadow>
       <planeGeometry args={[6.15, 3.28]} />
@@ -42,16 +49,16 @@ function RoomShell({ palette }: { palette: PaletteId }) {
         <planeGeometry args={[0.02, 1.6]} />
         <meshStandardMaterial color={look.key} emissive={look.key} emissiveIntensity={0.55} />
       </mesh>
-      <ambientLight intensity={palette === "ink-brass" ? 0.28 : 0.48} color={look.ambient} />
+      <ambientLight intensity={palette === "ink-brass" ? 0.42 : 0.62} color={look.ambient} />
       <directionalLight
         castShadow
         position={[-2.2, 4.4, 3.2]}
-        intensity={palette === "ink-brass" ? 1.05 : 1.35}
+        intensity={palette === "ink-brass" ? 1.1 : 1.4}
         color={look.key}
         shadow-mapSize={[1024, 1024]}
+        shadow-bias={-0.0002}
       />
-      <directionalLight position={[3.4, 2.4, 1.2]} intensity={0.45} color={look.fill} />
-      <pointLight position={[0, 2.4, -2.4]} intensity={0.35} color={look.rim} distance={8} />
+      <hemisphereLight args={[look.key, look.floor, 0.28]} />
     </group>
   );
 }
@@ -64,20 +71,28 @@ function WalkCamera({
   focus: [number, number, number] | null;
 }) {
   const { camera } = useThree();
-  const look = useRef(new THREE.Vector3(0, 0.9, -1.4));
+  const look = useRef(HOME_LOOK.clone());
+  const goal = useRef(HOME_POS.clone());
+  const target = useRef(HOME_LOOK.clone());
+
+  useEffect(() => {
+    if (active) return;
+    camera.position.copy(HOME_POS);
+    camera.lookAt(HOME_LOOK);
+  }, [active, camera]);
 
   useFrame((_, dt) => {
     if (!active || !focus) return;
     const k = 1 - Math.exp(-dt * 2.1);
     const [x, , z] = focus;
-    const goal = new THREE.Vector3(
+    goal.current.set(
       THREE.MathUtils.clamp(x * 0.35, -1.8, 1.8),
       1.48,
       THREE.MathUtils.clamp(z + 1.85, -1.1, 3.85),
     );
-    const target = new THREE.Vector3(x, 0.62, z);
-    camera.position.lerp(goal, k);
-    look.current.lerp(target, k);
+    target.current.set(x, 0.62, z);
+    camera.position.lerp(goal.current, k);
+    look.current.lerp(target.current, k);
     camera.lookAt(look.current);
   });
   return null;
@@ -112,7 +127,7 @@ function Piece({
         onDragStart();
       }}
     >
-      <FurnitureMesh3D product={product} selected={selected} walking={walking} />
+      <FurnitureMesh3D key={product.id} product={product} selected={selected} walking={walking} />
       {selected || walking ? (
         <Html position={[0, 1.15, 0]} center distanceFactor={7} style={{ pointerEvents: "none" }}>
           <div className="spatial-label">
@@ -228,7 +243,14 @@ function StageScene({
         studio={studio}
         onEnd={() => setDragId(null)}
       />
-      <ContactShadows position={[0, 0.02, -0.4]} opacity={0.38} scale={8} blur={2.4} far={4} />
+      <ContactShadows
+        position={[0, 0.02, -0.4]}
+        opacity={0.32}
+        scale={8}
+        blur={2.2}
+        far={4}
+        resolution={512}
+      />
       <WalkCamera active={studio.walkthrough} focus={focus} />
       <OrbitControls
         makeDefault
@@ -255,6 +277,8 @@ export function SpatialStage({
     <Canvas
       className="spatial-stage"
       shadows
+      dpr={[1, 1.5]}
+      gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
       camera={{ position: [0.8, 1.55, 3.7], fov: 46, near: 0.1, far: 40 }}
       onPointerMissed={() => studio.selectPlacement(null)}
     >
