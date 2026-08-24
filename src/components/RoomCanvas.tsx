@@ -9,6 +9,7 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [walkIndex, setWalkIndex] = useState(0);
+  const [hintOpen, setHintOpen] = useState(true);
 
   if (!room) return null;
 
@@ -40,12 +41,26 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
         onClick={() => studio.selectPlacement(null)}
       >
         <img className="room-photo" src={room.imageSrc} alt={room.name} />
-        <div className="canvas-hint">
-          Suggested placements sit on the photo like an AR pass. Drag to
-          rearrange. Click a piece to swap it from the store catalog.
-        </div>
+        {hintOpen ? (
+          <div className="canvas-hint">
+            Suggested placements sit on the photo like an AR pass. Drag to
+            rearrange. Click a piece to swap it from the store catalog.
+            <button
+              className="hint-dismiss"
+              onClick={(event) => {
+                event.stopPropagation();
+                setHintOpen(false);
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        ) : null}
         {studio.placedProducts.map(({ placement, product }) => {
-          const selected = studio.state.selectedId === placement.id;
+          const walking =
+            studio.walkthrough && walkItem?.placement.id === placement.id;
+          const selected =
+            studio.state.selectedId === placement.id || Boolean(walking);
           return (
             <button
               key={placement.id}
@@ -57,11 +72,13 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
               onClick={(event) => {
                 event.stopPropagation();
                 studio.selectPlacement(placement.id);
+                setHintOpen(false);
               }}
               onPointerDown={(event) => {
                 event.stopPropagation();
                 event.currentTarget.setPointerCapture(event.pointerId);
                 studio.selectPlacement(placement.id);
+                setHintOpen(false);
                 setDragId(placement.id);
               }}
             >
@@ -86,8 +103,21 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
         })}
 
         {studio.walkthrough && walkItem ? (
-          <div className="walkthrough" onClick={(event) => event.stopPropagation()}>
-            <div className="walk-card">
+          <div
+            className="walkthrough"
+            onClick={() => studio.setWalkthrough(false)}
+          >
+            <div
+              className="walk-card"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                className="walk-close"
+                onClick={() => studio.setWalkthrough(false)}
+                aria-label="Close walkthrough"
+              >
+                Close
+              </button>
               <p className="eyebrow">Look walkthrough · preview</p>
               <h2>{walkItem.product.name}</h2>
               <p>
@@ -119,12 +149,6 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
                 >
                   Next piece
                 </button>
-                <button
-                  className="btn ghost small"
-                  onClick={() => studio.setWalkthrough(false)}
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
@@ -139,7 +163,16 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
           <button className="btn ghost small" onClick={studio.refreshLook}>
             Reset placements
           </button>
-          <button className="btn small" onClick={() => studio.setWalkthrough(true)}>
+          <button
+            className="btn small"
+            onClick={() => {
+              const selectedIndex = studio.placedProducts.findIndex(
+                (item) => item.placement.id === studio.state.selectedId,
+              );
+              setWalkIndex(selectedIndex >= 0 ? selectedIndex : 0);
+              studio.setWalkthrough(true);
+            }}
+          >
             Preview walkthrough
           </button>
         </div>

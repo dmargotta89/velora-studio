@@ -510,6 +510,17 @@ button.wordmark {
   color: var(--ink-soft);
 }
 
+.hint-dismiss {
+  display: block;
+  margin-top: 0.55rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--ink);
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
 .mark {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -538,12 +549,25 @@ button.wordmark {
 }
 
 
+.mark.selected .glyph-wrap {
+  outline: 2px solid var(--ink);
+  outline-offset: 6px;
+}
+
 .mark-card {
   background: rgba(251, 247, 240, 0.94);
   border: 1px solid rgba(28, 23, 19, 0.1);
   padding: 0.35rem 0.5rem 0.4rem;
   min-width: 8.5rem;
   text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.mark:hover .mark-card,
+.mark.selected .mark-card {
+  opacity: 1;
 }
 
 .mark-card b {
@@ -682,10 +706,23 @@ button.wordmark {
 }
 
 .walk-card {
+  position: relative;
   margin: 1.2rem;
   padding: 1.1rem 1.15rem;
   background: rgba(28, 23, 19, 0.88);
   max-width: 28rem;
+}
+
+.walk-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  border: 1px solid rgba(255, 253, 248, 0.35);
+  background: transparent;
+  color: var(--paper-2);
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 .walk-card h2 {
