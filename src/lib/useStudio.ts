@@ -74,10 +74,12 @@ export function useStudio() {
 
   function selectPlacement(id: string | null) {
     setState((current) => ({ ...current, selectedId: id }));
-    if (id) {
-      const placement = state.placements.find((item) => item.id === id);
-      setSwapSlot(placement?.slot ?? null);
+    if (!id) {
+      setSwapSlot(null);
+      return;
     }
+    const placement = state.placements.find((item) => item.id === id);
+    setSwapSlot(placement?.slot ?? null);
   }
 
   function movePlacement(id: string, x: number, y: number) {
@@ -105,6 +107,7 @@ export function useStudio() {
   }
 
   function removePlacement(id: string) {
+    if (state.selectedId === id) setSwapSlot(null);
     setState((current) => ({
       ...current,
       selectedId: current.selectedId === id ? null : current.selectedId,
@@ -143,6 +146,7 @@ export function useStudio() {
   }
 
   function refreshLook() {
+    setSwapSlot(null);
     setState((current) => {
       if (!current.room) return current;
       return {
