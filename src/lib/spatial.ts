@@ -1,4 +1,4 @@
-import type { PaletteId } from "../types";
+import type { PaletteId, ProductCategory } from "../types";
 
 /** Floor extents in meters. x percent maps across width; y percent maps into depth. */
 export const FLOOR_WIDTH = 6.4;
@@ -78,3 +78,42 @@ export const paletteAtmosphere: Record<PaletteId, Atmosphere> = {
     rim: "#5d6872",
   },
 };
+
+/** Camera stand-in and look-at for the named walkthrough piece. */
+export function walkCameraFor(
+  category: ProductCategory,
+  wx: number,
+  wz: number,
+): { position: [number, number, number]; target: [number, number, number] } {
+  const distance =
+    category === "rug"
+      ? 2.4
+      : category === "sofa" || category === "bed"
+        ? 2.6
+        : category === "desk"
+          ? 2.15
+          : category === "lamp" || category === "plant"
+            ? 1.6
+            : 1.95;
+  const lookY =
+    category === "rug"
+      ? 0.12
+      : category === "lamp"
+        ? 0.95
+        : category === "plant"
+          ? 0.72
+          : category === "sofa" || category === "bed"
+            ? 0.5
+            : 0.42;
+  const camY = category === "rug" ? 1.55 : 1.4;
+  const side =
+    Math.abs(wx) < 0.35 ? (wx >= 0 ? 0.7 : -0.7) : wx > 0 ? -0.55 : 0.55;
+  return {
+    position: [
+      Math.min(2.3, Math.max(-2.3, wx + side)),
+      camY,
+      Math.min(3.95, Math.max(-0.85, wz + distance)),
+    ],
+    target: [wx, lookY, wz],
+  };
+}
