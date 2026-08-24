@@ -1,4 +1,5 @@
 import { catalog } from "../data/catalog";
+import { featureName, paletteName, styleName, themeName } from "./labels";
 import type {
   Placement,
   Product,
@@ -29,6 +30,12 @@ const slotDefaults: Record<
   plant: { x: 82, y: 56, scale: 1 },
 };
 
+export interface RankedItem {
+  product: Product;
+  score: number;
+  reasons: string[];
+}
+
 export function slotsFor(kind: RoomKind, taste?: Taste): SlotId[] {
   let slots =
     kind === "dining"
@@ -48,19 +55,47 @@ export function slotsFor(kind: RoomKind, taste?: Taste): SlotId[] {
   return slots;
 }
 
+export function matchReasons(
+  product: Product,
+  taste: Taste,
+  roomKind: RoomKind,
+): string[] {
+  const reasons: string[] = [];
+  if (product.roomKinds.includes(roomKind)) reasons.push("fits this room");
+  if (product.themes.includes(taste.theme)) reasons.push(themeName(taste.theme));
+  if (product.styles.includes(taste.style)) reasons.push(styleName(taste.style));
+  if (product.palettes.includes(taste.palette)) {
+    reasons.push(paletteName(taste.palette));
+  }
+  for (const feature of taste.features) {
+    if (product.features.includes(feature)) reasons.push(featureName(feature));
+  }
+  return reasons;
+}
+
 export function scoreProduct(
   product: Product,
   taste: Taste,
   roomKind: RoomKind,
 ): number {
   let score = 0;
-  if (product.roomKinds.includes(roomKind)) score += 8;
+  if (product.roomKinds.includes(roomKind)) score += 14;
+  else score -= 28;
+  if (product.themes.includes(taste.theme)) score += 14;
   else score -= 6;
-  if (product.themes.includes(taste.theme)) score += 6;
-  if (product.styles.includes(taste.style)) score += 6;
-  if (product.palettes.includes(taste.palette)) score += 5;
+  if (product.styles.includes(taste.style)) score += 11;
+  else score -= 3;
+  if (product.palettes.includes(taste.palette)) score += 12;
+  else score -= 5;
   for (const feature of taste.features) {
-    if (product.features.includes(feature)) score += 3;
+    if (product.features.includes(feature)) score += 5;
+  }
+  if (
+    taste.features.includes("small-space") &&
+    !product.features.includes("small-space") &&
+    (product.category === "sofa" || product.category === "table")
+  ) {
+    score -= 4;
   }
   if (product.arCapable) score += 1;
   return score;
@@ -70,15 +105,41 @@ export function rankCatalog(
   taste: Taste,
   roomKind: RoomKind,
   category?: ProductCategory,
-): Product[] {
+): RankedItem[] {
   return catalog
     .filter((product) => (category ? product.category === category : true))
+    .filter((product) => product.roomKinds.includes(roomKind))
     .map((product) => ({
       product,
       score: scoreProduct(product, taste, roomKind),
+      reasons: matchReasons(product, taste, roomKind),
     }))
-    .sort((a, b) => b.score - a.score || a.product.price - b.product.price)
-    .map((entry) => entry.product);
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.reasons.length - a.reasons.length ||
+        a.product.price - b.product.price,
+    );
+}
+
+function pickForSlot(
+  slot: SlotId,
+  taste: Taste,
+  roomKind: RoomKind,
+  used: Set<string>,
+  usedRetailers: Set<string>,
+): Product | undefined {
+  const ranked = rankCatalog(taste, roomKind, slot).filter(
+    (entry) => !used.has(entry.product.id),
+  );
+  if (ranked.length === 0) return undefined;
+  const best = ranked[0];
+  const diversified = ranked.find(
+    (entry) =>
+      !usedRetailers.has(entry.product.retailer) &&
+      entry.score >= best.score - 8,
+  );
+  return (diversified ?? best).product;
 }
 
 export function suggestPlacements(
@@ -87,13 +148,14 @@ export function suggestPlacements(
   existing: Placement[] = [],
 ): Placement[] {
   const used = new Set<string>();
+  const usedRetailers = new Set<string>();
   return slotsFor(room.kind, taste).map((slot) => {
     const previous = existing.find((placement) => placement.slot === slot);
-    const ranked = rankCatalog(taste, room.kind, slot).filter(
-      (product) => !used.has(product.id),
-    );
-    const product = ranked[0];
-    if (product) used.add(product.id);
+    const product = pickForSlot(slot, taste, room.kind, used, usedRetailers);
+    if (product) {
+      used.add(product.id);
+      usedRetailers.add(product.retailer);
+    }
     const fallback = slotDefaults[slot];
     return {
       id: previous?.id ?? uid(slot),
@@ -108,11 +170,9 @@ export function suggestPlacements(
 }
 
 export function lookSummary(taste: Taste): string {
-  const theme = taste.theme.replace("-", " ");
-  const palette = taste.palette.replace("-", " & ");
   const extras =
     taste.features.length > 0
       ? ` · ${taste.features.length} living note${taste.features.length === 1 ? "" : "s"}`
       : "";
-  return `${theme} · ${taste.style.replace("-", " ")} · ${palette}${extras}`;
+  return `${themeName(taste.theme)} · ${styleName(taste.style)} · ${paletteName(taste.palette)}${extras}`;
 }

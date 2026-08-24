@@ -6,6 +6,7 @@ import type {
   Product,
   ProductCategory,
   Room,
+  RoomKind,
   Taste,
 } from "../types";
 import { emptyStudio, loadStudio, saveStudio } from "./storage";
@@ -42,6 +43,20 @@ export function useStudio() {
       placements: suggestPlacements(room, current.taste, []),
     }));
     setSwapSlot(null);
+  }
+
+  function setRoomKind(kind: RoomKind) {
+    setSwapSlot(null);
+    setState((current) => {
+      if (!current.room || current.room.kind === kind) return current;
+      const room = { ...current.room, kind };
+      return {
+        ...current,
+        room,
+        selectedId: null,
+        placements: suggestPlacements(room, current.taste, []),
+      };
+    });
   }
 
   function setTaste(partial: Partial<Taste>) {
@@ -181,6 +196,7 @@ export function useStudio() {
     setWalkthrough,
     placedProducts,
     setRoom,
+    setRoomKind,
     setTaste,
     toggleFeature,
     selectPlacement,
