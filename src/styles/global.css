@@ -343,6 +343,8 @@ button.wordmark {
 }
 
 .topbar {
+  position: relative;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -424,8 +426,9 @@ button.wordmark {
   left: auto;
   bottom: auto;
   top: calc(100% + 0.45rem);
-  z-index: 20;
+  z-index: 50;
   width: min(24rem, 70vw);
+  background: var(--paper-3);
 }
 
 .saved-rooms {
