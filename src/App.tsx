@@ -6,6 +6,7 @@ import { useStudio } from "./lib/useStudio";
 import type { StudioPhase } from "./types";
 
 void import("./components/SpatialStage");
+void import("./components/ArControls");
 
 export default function App() {
   const studio = useStudio();

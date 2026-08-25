@@ -27,7 +27,8 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
       <h2>Store furniture</h2>
       <p className="muted">
         Mocked Ashley, Amazon, and Kirkland&apos;s pieces ranked for this room
-        and look. Live store SDKs are not connected.
+        and look. Not live store SDKs — simple local 3D / GLB stand-ins for
+        on-device AR where WebXR is available.
       </p>
 
       {selectedProduct && studio.selected ? (
@@ -37,7 +38,9 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
           <div className="meta-row">
             <span>
               {selectedProduct.retailer} ·{" "}
-              {selectedProduct.arCapable ? "AR model" : "Photo only"}
+              {selectedProduct.arCapable
+                ? "Mocked AR model"
+                : "Photo only"}
             </span>
             <span>{money(selectedProduct.price)}</span>
           </div>
@@ -131,7 +134,7 @@ export function CatalogPanel({ studio }: { studio: StudioModel }) {
                 <small>
                   {product.retailer}
                   {" · "}
-                  {product.arCapable ? "AR-capable" : "No AR model"}
+                  {product.arCapable ? "Mocked AR model" : "No AR model"}
                 </small>
                 {reasons.length > 0 ? (
                   <small className="match-line">

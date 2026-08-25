@@ -4,6 +4,7 @@ import { fileToRoomDataUrl } from "../lib/image";
 import { uid } from "../lib/ids";
 import { roomKindLabels } from "../lib/labels";
 import type { Room, RoomKind } from "../types";
+import { CameraCapture } from "./CameraCapture";
 
 const kinds: RoomKind[] = ["living", "dining", "bedroom", "study"];
 
@@ -16,6 +17,7 @@ export function RoomPicker({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<RoomKind>("living");
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   async function onUpload(file: File | undefined) {
     if (!file) return;
@@ -27,7 +29,7 @@ export function RoomPicker({
         kind,
         imageSrc,
         source: "upload",
-        note: "Your photo stands in for a future 3D scan of this room.",
+        note: "Uploaded photo, kept on this device. Not a LiDAR mesh.",
       });
     } catch {
       window.alert("That file could not be opened as a room photo.");
@@ -42,12 +44,12 @@ export function RoomPicker({
       </div>
       <div className="room-head">
         <div>
-          <p className="eyebrow">Step one · Room</p>
+          <p className="eyebrow">Step one · Capture</p>
           <h1>Start from a space.</h1>
           <p className="muted" style={{ maxWidth: "36rem", marginTop: "0.6rem" }}>
-            Upload a photo of a room, or borrow one of the sample interiors.
-            Capture is the stand-in for scanning. Taste and AR-ready furniture
-            come next.
+            Take a photo from this device camera, upload one you already have, or
+            borrow a sample interior. Capture is a camera frame — not LiDAR, not a
+            live 3D scan. Taste and mocked store furniture come next.
           </p>
         </div>
         <button className="btn ghost small" onClick={onBack}>
@@ -66,29 +68,44 @@ export function RoomPicker({
         ))}
       </div>
       <p className="muted" style={{ marginBottom: "0.9rem" }}>
-        Room type is used for uploaded photos so the mocked catalog can stay
-        relevant. Sample interiors are living rooms.
+        Room type is used for camera and uploaded photos so the mocked catalog can
+        stay relevant. Sample interiors are living rooms.
       </p>
       <div className="room-grid">
-        <label className="upload-card">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            onChange={(event) => void onUpload(event.target.files?.[0])}
-          />
-          <div>
-            <p className="eyebrow">Your scan stand-in</p>
-            <h2>Upload a room photo</h2>
-            <p className="muted">
-              A wide shot works best — living room, dining, bedroom, or a corner
-              you want to restyle. We keep it on this device.
-            </p>
-          </div>
-          <span className="btn" style={{ alignSelf: "flex-start" }}>
-            Choose photo
-          </span>
-        </label>
+        <div className="capture-pair">
+          <button className="upload-card" type="button" onClick={() => setCameraOpen(true)}>
+            <div>
+              <p className="eyebrow">Device camera</p>
+              <h2>Capture a room</h2>
+              <p className="muted">
+                Uses the camera on this device (getUserMedia). You grab a photo or
+                video frame — not a LiDAR mesh. Permission may be required.
+              </p>
+            </div>
+            <span className="btn" style={{ alignSelf: "flex-start" }}>
+              Open camera
+            </span>
+          </button>
+          <label className="upload-card">
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              onChange={(event) => void onUpload(event.target.files?.[0])}
+            />
+            <div>
+              <p className="eyebrow">Fallback</p>
+              <h2>Upload a room photo</h2>
+              <p className="muted">
+                A wide shot works best. We keep it on this device. Sample interiors
+                below if you would rather not use a camera.
+              </p>
+            </div>
+            <span className="btn" style={{ alignSelf: "flex-start" }}>
+              Choose photo
+            </span>
+          </label>
+        </div>
         {sampleRooms.map((room) => (
           <button
             key={room.id}
@@ -104,6 +121,16 @@ export function RoomPicker({
           </button>
         ))}
       </div>
+      {cameraOpen ? (
+        <CameraCapture
+          kind={kind}
+          onCancel={() => setCameraOpen(false)}
+          onCapture={(room) => {
+            setCameraOpen(false);
+            onPick(room);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
