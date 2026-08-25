@@ -5,6 +5,8 @@ import { Welcome } from "./components/Welcome";
 import { useStudio } from "./lib/useStudio";
 import type { StudioPhase } from "./types";
 
+void import("./components/SpatialStage");
+
 export default function App() {
   const studio = useStudio();
   const [phase, setPhase] = useState<StudioPhase>("welcome");

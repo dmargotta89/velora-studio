@@ -14,14 +14,22 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
 
   if (!room) return null;
 
-  const walkItem = studio.placedProducts[walkIndex];
   const count = studio.placedProducts.length;
+  const safeIndex = count === 0 ? 0 : ((walkIndex % count) + count) % count;
+  const walkItem = studio.placedProducts[safeIndex];
 
   return (
     <div className="canvas-wrap">
       <div className="canvas spatial-canvas">
-        <Suspense fallback={<div className="spatial-fallback">Building the room…</div>}>
-          <SpatialStage studio={studio} walkIndex={walkIndex} />
+        <img className="spatial-photo-bg" src={room.imageSrc} alt="" />
+        <Suspense
+          fallback={
+            <div className="spatial-fallback">
+              <span>Staging the look…</span>
+            </div>
+          }
+        >
+          <SpatialStage studio={studio} walkIndex={safeIndex} />
         </Suspense>
         <div className="preview-badge">
           <span>PREVIEW</span>
@@ -39,7 +47,7 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
               </button>
               <p className="eyebrow">PREVIEW walkthrough · not live AR</p>
               <p className="walk-count">
-                Piece {walkIndex + 1} of {count}
+                Piece {safeIndex + 1} of {count}
               </p>
               <h2>{walkItem.product.name}</h2>
               <p>
@@ -77,6 +85,9 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
         <div>
           <p className="eyebrow">{room.name}</p>
           <p className="look-line">{lookSummary(studio.state.taste)}</p>
+          <p className="look-hint">
+            Click a piece to select, then drag it. Drag empty space to look around.
+          </p>
         </div>
         <div className="inline">
           <button className="btn ghost small" onClick={studio.refreshLook}>

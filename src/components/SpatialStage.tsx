@@ -2,13 +2,20 @@ import { ContactShadows, Html, OrbitControls, useTexture } from "@react-three/dr
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { paletteAtmosphere, percentToWorld, worldToPercent } from "../lib/spatial";
+import {
+  paletteAtmosphere,
+  percentToWorld,
+  walkCameraFor,
+  worldToPercent,
+} from "../lib/spatial";
 import type { StudioModel } from "../lib/useStudio";
-import type { PaletteId, Placement, Product } from "../types";
+import type { PaletteId, Placement, Product, ProductCategory } from "../types";
 import { FurnitureMesh3D } from "./FurnitureMesh3D";
 
 const HOME_POS = new THREE.Vector3(0.8, 1.55, 3.7);
 const HOME_LOOK = new THREE.Vector3(0, 0.7, -0.8);
+
+type OrbitHandle = { enabled: boolean };
 
 function ScanWall({ src }: { src: string }) {
   const texture = useTexture(src);
@@ -65,32 +72,37 @@ function RoomShell({ palette }: { palette: PaletteId }) {
 
 function WalkCamera({
   active,
+  pieceId,
+  category,
   focus,
 }: {
   active: boolean;
+  pieceId: string | null;
+  category: ProductCategory | null;
   focus: [number, number, number] | null;
 }) {
   const { camera } = useThree();
   const look = useRef(HOME_LOOK.clone());
   const goal = useRef(HOME_POS.clone());
   const target = useRef(HOME_LOOK.clone());
+  const lastPiece = useRef<string | null>(null);
 
   useEffect(() => {
     if (active) return;
+    lastPiece.current = null;
     camera.position.copy(HOME_POS);
     camera.lookAt(HOME_LOOK);
   }, [active, camera]);
 
   useFrame((_, dt) => {
-    if (!active || !focus) return;
-    const k = 1 - Math.exp(-dt * 2.1);
+    if (!active || !focus || !category || !pieceId) return;
     const [x, , z] = focus;
-    goal.current.set(
-      THREE.MathUtils.clamp(x * 0.35, -1.8, 1.8),
-      1.48,
-      THREE.MathUtils.clamp(z + 1.85, -1.1, 3.85),
-    );
-    target.current.set(x, 0.62, z);
+    const frame = walkCameraFor(category, x, z);
+    goal.current.set(...frame.position);
+    target.current.set(...frame.target);
+    const snap = lastPiece.current !== pieceId;
+    lastPiece.current = pieceId;
+    const k = snap ? 1 : 1 - Math.exp(-dt * 2.6);
     camera.position.lerp(goal.current, k);
     look.current.lerp(target.current, k);
     camera.lookAt(look.current);
@@ -123,8 +135,9 @@ function Piece({
       scale={placement.scale}
       onPointerDown={(event: ThreeEvent<PointerEvent>) => {
         event.stopPropagation();
-        onSelect();
-        onDragStart();
+        event.nativeEvent.stopImmediatePropagation();
+        if (selected) onDragStart();
+        else onSelect();
       }}
     >
       <FurnitureMesh3D key={product.id} product={product} selected={selected} walking={walking} />
@@ -169,6 +182,7 @@ function DragController({
     function move(event: PointerEvent) {
       const id = dragIdRef.current;
       if (!id) return;
+      event.preventDefault();
       const rect = gl.domElement.getBoundingClientRect();
       pointer.set(
         ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -205,11 +219,16 @@ function StageScene({
 }) {
   const room = studio.state.room;
   const [dragId, setDragId] = useState<string | null>(null);
+  const orbitRef = useRef<OrbitHandle | null>(null);
   const walkItem = studio.placedProducts[walkIndex];
   const focus = useMemo(() => {
     if (!studio.walkthrough || !walkItem) return null;
     return percentToWorld(walkItem.placement.x, walkItem.placement.y);
   }, [studio.walkthrough, walkItem]);
+
+  function setOrbitEnabled(enabled: boolean) {
+    if (orbitRef.current) orbitRef.current.enabled = enabled;
+  }
 
   if (!room) return null;
 
@@ -235,13 +254,20 @@ function StageScene({
             studio.walkthrough && walkItem?.placement.id === placement.id,
           )}
           onSelect={() => studio.selectPlacement(placement.id)}
-          onDragStart={() => setDragId(placement.id)}
+          onDragStart={() => {
+            setOrbitEnabled(false);
+            studio.selectPlacement(placement.id);
+            setDragId(placement.id);
+          }}
         />
       ))}
       <DragController
         dragId={dragId}
         studio={studio}
-        onEnd={() => setDragId(null)}
+        onEnd={() => {
+          setDragId(null);
+          if (!studio.walkthrough) setOrbitEnabled(true);
+        }}
       />
       <ContactShadows
         position={[0, 0.02, -0.4]}
@@ -251,8 +277,16 @@ function StageScene({
         far={4}
         resolution={512}
       />
-      <WalkCamera active={studio.walkthrough} focus={focus} />
+      <WalkCamera
+        active={studio.walkthrough}
+        pieceId={walkItem?.placement.id ?? null}
+        category={walkItem?.product.category ?? null}
+        focus={focus}
+      />
       <OrbitControls
+        ref={(node) => {
+          orbitRef.current = node;
+        }}
         makeDefault
         enabled={!studio.walkthrough && !dragId}
         enablePan={false}
