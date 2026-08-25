@@ -1,11 +1,20 @@
+import { SavedRooms } from "./SavedRooms";
+import type { ArRoomSummary } from "../lib/arRoom";
+
 export function Welcome({
   onStart,
   hasSaved,
   onResume,
+  savedRooms,
+  onResumeSaved,
+  onDeleteSaved,
 }: {
   onStart: () => void;
   hasSaved: boolean;
   onResume: () => void;
+  savedRooms: ArRoomSummary[];
+  onResumeSaved: (id: string) => void;
+  onDeleteSaved: (id: string) => void;
 }) {
   return (
     <section className="hero screen">
@@ -20,17 +29,16 @@ export function Welcome({
           </p>
           <h1>See the room. Then live in the look.</h1>
           <p className="lede">
-            Velora is heading toward 3D-scan → style → live retailer AR. This
-            slice is the honest next step: capture a room from your camera, choose
-            a theme and palette, and place mocked furniture from Ashley, Amazon,
-            and Kirkland&apos;s. On-device AR runs only where WebXR can hit-test a
-            floor.
+            Capture a room from your camera, save an AR version on this device,
+            and walk mocked store furniture. LiDAR mesh mapping runs only on a
+            native ARKit / ARCore host — never from a 2D photo.
           </p>
           <p className="honest">
-            Camera capture is a photo or video frame — not LiDAR. On-device AR
-            preview runs only on a compatible device with WebXR immersive-ar and
-            floor hit-test; otherwise you get the PREVIEW stage, and we do not
-            pretend AR is running. Catalog cards are mocked, not live store SDKs.
+            Three honest modes: <strong>camera frame</strong> (getUserMedia, not
+            LiDAR), <strong>LiDAR mesh</strong> (only if a native scan actually
+            stored a mesh), or <strong>none</strong> (sample/upload photo).
+            On-device AR preview still needs WebXR hit-test. Catalog cards are
+            mocked, not live store SDKs.
           </p>
           <div className="hero-actions">
             <button className="btn" onClick={onStart}>
@@ -48,8 +56,8 @@ export function Welcome({
             <p className="eyebrow">01</p>
             <h3>Capture</h3>
             <p>
-              Device camera, photo upload, or a sample interior. A frame of the
-              room — not a LiDAR mesh.
+              Device camera frames, or a sample/upload with mapping none. Not a
+              LiDAR mesh unless a native mapper is present.
             </p>
           </article>
           <article>
@@ -59,23 +67,24 @@ export function Welcome({
           </article>
           <article>
             <p className="eyebrow">03</p>
-            <h3>Walk</h3>
+            <h3>Save AR room</h3>
             <p>
-              On-device AR preview where WebXR floor hit-test is available.
-              PREVIEW walkthrough otherwise. Catalog stays mocked.
+              Frames, furniture, and real XR poses (when AR actually ran) persist
+              locally so you can resume. LiDAR stays gated.
             </p>
           </article>
         </div>
+        <SavedRooms rooms={savedRooms} onResume={onResumeSaved} onDelete={onDeleteSaved} />
       </div>
       <div className="hero-visual">
         <img src="/rooms/gallery-living.jpg" alt="A sunlit living room sample" />
         <div className="hero-caption">
           <p className="eyebrow">Now in this slice</p>
-          <strong>Camera capture · AR where supported</strong>
+          <strong>Working camera · saved AR rooms · gated LiDAR</strong>
           <p>
-            Capture from the device camera. Place mocked catalog GLB pieces on a
-            detected floor in WebXR. If AR is not available, PREVIEW is the path
-            — we never fake a live AR session or store SDK.
+            Capture from the device camera and resume the saved AR room later.
+            If this phone has no LiDAR host, it is camera-only — we do not fake a
+            mesh.
           </p>
         </div>
       </div>

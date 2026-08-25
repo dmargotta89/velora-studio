@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import type { StudioModel } from "../lib/useStudio";
 import { CatalogPanel } from "./CatalogPanel";
+import { LidarGate } from "./LidarGate";
+import { MappingBadge } from "./MappingBadge";
 import { RoomCanvas } from "./RoomCanvas";
 import { TasteRail } from "./TasteRail";
 
@@ -35,8 +37,12 @@ export function Studio({
           <strong>Velora</strong>
           <span>Studio</span>
         </button>
+        <MappingBadge mode={studio.mappingMode} />
         <div className="topbar-actions">
-          <span className="save-pill">Saved on this device</span>
+          <span className="save-pill">
+            {studio.state.activeArRoomId ? "AR room saved on this device" : "Saved on this device"}
+          </span>
+          <LidarGate studio={studio} />
           <button className="btn ghost small" onClick={onChangeRoom}>
             Change room
           </button>

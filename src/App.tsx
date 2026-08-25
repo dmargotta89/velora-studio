@@ -16,14 +16,22 @@ export default function App() {
     return <div className="screen" />;
   }
 
-  const hasSaved = Boolean(studio.state.room);
+  const hasLastLook = Boolean(studio.state.room);
+
+  async function resumeSaved(id: string) {
+    await studio.resumeArRoom(id);
+    setPhase("studio");
+  }
 
   if (phase === "welcome") {
     return (
       <Welcome
-        hasSaved={hasSaved}
+        hasSaved={hasLastLook}
         onStart={() => setPhase("room")}
         onResume={() => setPhase("studio")}
+        savedRooms={studio.savedRooms}
+        onResumeSaved={(id) => void resumeSaved(id)}
+        onDeleteSaved={(id) => void studio.removeSavedRoom(id)}
       />
     );
   }
@@ -31,10 +39,16 @@ export default function App() {
   if (phase === "room" || !studio.state.room) {
     return (
       <RoomPicker
-        onBack={() => setPhase(hasSaved ? "studio" : "welcome")}
+        savedRooms={studio.savedRooms}
+        onResumeSaved={(id) => void resumeSaved(id)}
+        onDeleteSaved={(id) => void studio.removeSavedRoom(id)}
+        onBack={() => setPhase(hasLastLook ? "studio" : "welcome")}
         onPick={(room) => {
           studio.setRoom(room);
           setPhase("studio");
+        }}
+        onCameraFrames={(kind, frames) => {
+          void studio.openCameraRoom({ kind, frames }).then(() => setPhase("studio"));
         }}
       />
     );

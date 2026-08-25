@@ -42,6 +42,15 @@ export type FeatureId =
 
 export type RoomSource = "sample" | "upload" | "camera";
 
+/** Honest mapping state. Never set lidar-mesh unless a real native mesh was stored. */
+export type MappingMode = "none" | "camera-frame" | "lidar-mesh";
+
+/** 6-DoF pose from a real XR session. Never inferred from a 2D photo. */
+export interface Pose6 {
+  position: [number, number, number];
+  orientation: [number, number, number, number];
+}
+
 export interface Room {
   id: string;
   name: string;
@@ -49,6 +58,7 @@ export interface Room {
   imageSrc: string;
   source: RoomSource;
   note: string;
+  mappingMode: MappingMode;
 }
 
 export interface TasteOption<T extends string> {
@@ -95,14 +105,17 @@ export interface Placement {
   y: number;
   scale: number;
   rotation: number;
+  /** Set only when this piece was placed during a real WebXR hit-test. */
+  worldPose?: Pose6 | null;
 }
 
 export interface PersistedStudio {
-  version: 1;
+  version: 1 | 2;
   room: Room | null;
   taste: Taste;
   placements: Placement[];
   selectedId: string | null;
+  activeArRoomId?: string | null;
 }
 
 export type StudioPhase = "welcome" | "room" | "studio";

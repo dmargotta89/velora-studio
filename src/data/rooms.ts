@@ -7,6 +7,7 @@ export const sampleRooms: Room[] = [
     kind: "living",
     imageSrc: "/rooms/morning-corner.jpg",
     source: "sample",
+    mappingMode: "none",
     note: "Sample interior photo — a fallback, not a LiDAR scan.",
   },
   {
@@ -15,6 +16,7 @@ export const sampleRooms: Room[] = [
     kind: "living",
     imageSrc: "/rooms/gallery-living.jpg",
     source: "sample",
+    mappingMode: "none",
     note: "Sun from the garden side. Sample photo for testing a seating look.",
   },
   {
@@ -23,6 +25,7 @@ export const sampleRooms: Room[] = [
     kind: "living",
     imageSrc: "/rooms/open-house.jpg",
     source: "sample",
+    mappingMode: "none",
     note: "Living into kitchen. Sample photo fallback, not a whole-home scan.",
   },
 ];

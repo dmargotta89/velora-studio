@@ -1,7 +1,11 @@
 import { lazy, Suspense, useState } from "react";
 import { money } from "../lib/ids";
 import { lookSummary } from "../lib/suggest";
+import { openCameraStream, stopStream } from "../lib/camera";
+import { cameraErrorMessage } from "../lib/image";
 import type { StudioModel } from "../lib/useStudio";
+import { CameraCapture } from "./CameraCapture";
+import { MappingBadge } from "./MappingBadge";
 
 const SpatialStage = lazy(async () => {
   const mod = await import("./SpatialStage");
@@ -16,6 +20,9 @@ const ArControls = lazy(async () => {
 export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const room = studio.state.room;
   const [walkIndex, setWalkIndex] = useState(0);
+  const [addFrame, setAddFrame] = useState(false);
+  const [addStream, setAddStream] = useState<MediaStream | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   if (!room) return null;
 
@@ -23,11 +30,11 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const safeIndex = count === 0 ? 0 : ((walkIndex % count) + count) % count;
   const walkItem = studio.placedProducts[safeIndex];
   const captureLine =
-    room.source === "camera"
-      ? "Camera frame"
-      : room.source === "upload"
-        ? "Uploaded photo"
-        : "Sample photo";
+    room.mappingMode === "lidar-mesh"
+      ? "LiDAR mesh"
+      : room.mappingMode === "camera-frame"
+        ? "Camera frame"
+        : "Mapping none";
 
   return (
     <div className="canvas-wrap">
@@ -44,7 +51,13 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
         </Suspense>
         <div className="preview-badge">
           <span>PREVIEW</span>
-          {captureLine} · 3D stage, not LiDAR · AR only on a compatible device
+          {captureLine} · 3D stage
+          {room.mappingMode === "lidar-mesh"
+            ? " · real native mesh stored"
+            : " · not a LiDAR mesh"}
+        </div>
+        <div className="mapping-on-stage">
+          <MappingBadge mode={room.mappingMode} />
         </div>
         {studio.walkthrough && walkItem ? (
           <div className="walkthrough" onClick={() => studio.setWalkthrough(false)}>
@@ -105,6 +118,28 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
           <button className="btn ghost small" onClick={studio.refreshLook}>
             Reset placements
           </button>
+          {room.mappingMode !== "lidar-mesh" ? (
+            <button
+              className="btn ghost small"
+              onClick={() => {
+                void (async () => {
+                  setAddError(null);
+                  try {
+                    const stream = await openCameraStream("environment");
+                    setAddStream(stream);
+                    setAddFrame(true);
+                  } catch (caught) {
+                    stopStream(addStream);
+                    setAddStream(null);
+                    setAddError(cameraErrorMessage(caught));
+                    setAddFrame(true);
+                  }
+                })();
+              }}
+            >
+              Add camera frame
+            </button>
+          ) : null}
           <button
             className="btn small"
             onClick={() => {
@@ -122,6 +157,26 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
           </Suspense>
         </div>
       </div>
+      {addFrame ? (
+        <CameraCapture
+          kind={room.kind}
+          initialStream={addStream}
+          initialError={addError}
+          onCancel={() => {
+            stopStream(addStream);
+            setAddStream(null);
+            setAddFrame(false);
+          }}
+          onCommit={(frames) => {
+            stopStream(addStream);
+            setAddStream(null);
+            setAddFrame(false);
+            for (const frame of frames) {
+              void studio.addCameraFrame(frame.imageSrc, frame.pose);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -343,10 +343,13 @@ button.wordmark {
 }
 
 .topbar {
+  position: relative;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--line);
   background: rgba(251, 247, 240, 0.9);
@@ -368,6 +371,123 @@ button.wordmark {
   padding: 0.28rem 0.6rem;
   border-radius: 999px;
   background: var(--paper-3);
+}
+
+.mapping-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: min(28rem, 100%);
+  padding: 0.4rem 0.65rem;
+  background: rgba(28, 23, 19, 0.78);
+  color: #f7f1e6;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 253, 248, 0.16);
+}
+
+.topbar .mapping-badge {
+  background: var(--paper-3);
+  color: var(--ink-soft);
+  border-color: var(--line);
+}
+
+.mapping-badge span {
+  flex: none;
+  letter-spacing: 0.12em;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.16rem 0.38rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  color: inherit;
+}
+
+.mapping-badge.mode-lidar-mesh span {
+  border-color: var(--sage);
+  color: var(--sage);
+}
+
+.mapping-on-stage {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 4;
+  max-width: min(22rem, calc(100% - 2rem));
+}
+
+.lidar-gate {
+  position: relative;
+}
+
+.lidar-why {
+  right: 0;
+  left: auto;
+  bottom: auto;
+  top: calc(100% + 0.45rem);
+  z-index: 50;
+  width: min(24rem, 70vw);
+  background: var(--paper-3);
+}
+
+.saved-rooms {
+  margin-top: 2rem;
+}
+
+.saved-room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.8rem;
+}
+
+.saved-room-card {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+}
+
+.saved-room-card img,
+.saved-room-cover {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: #d7cbb8;
+}
+
+.saved-room-card div {
+  padding: 0 0.85rem 0.9rem;
+}
+
+.saved-room-card h3 {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 540;
+  margin: 0.15rem 0 0.2rem;
+}
+
+.camera-thumbs {
+  display: flex;
+  gap: 0.4rem;
+  overflow: auto;
+  margin: 0.55rem 0 0.2rem;
+}
+
+.camera-thumbs img {
+  height: 64px;
+  width: 96px;
+  object-fit: cover;
+  flex: none;
+}
+
+.camera-status {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0.45rem 0 0;
 }
 
 .studio-body {

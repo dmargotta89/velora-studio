@@ -79,6 +79,7 @@ export function ArControls({ studio }: { studio: StudioModel }) {
           setLive(false);
           setStatus(null);
         },
+        onPlaced: (result) => studio.recordWorldPose(result.productId, result.pose),
       });
     } catch (caught) {
       runtimeRef.current = null;

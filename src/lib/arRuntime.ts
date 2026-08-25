@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import type { Product } from "../types";
+import type { Pose6, Product } from "../types";
 import { loadCatalogGlb } from "./catalogGlb";
+import { matrixToPose6 } from "./pose";
 import { arStartError } from "./webxr";
 
 export type ArRuntimeStatus =
@@ -33,16 +34,19 @@ export class FloorArRuntime {
   private selectHandler: (() => void) | null = null;
   private endHandler: (() => void) | null = null;
   private endedCallback: (() => void) | null = null;
+  private onPlaced: ((result: { productId: string; pose: Pose6 }) => void) | null = null;
 
   async start(options: {
     overlay: HTMLElement;
     getPiece: () => ArPiece | null;
     onStatus: (status: ArRuntimeStatus) => void;
     onEnded: () => void;
+    onPlaced?: (result: { productId: string; pose: Pose6 }) => void;
   }): Promise<void> {
     this.getPiece = options.getPiece;
     this.onStatus = options.onStatus;
     this.endedCallback = options.onEnded;
+    this.onPlaced = options.onPlaced ?? null;
     this.onStatus({ kind: "starting" });
 
     if (!navigator.xr) {
@@ -177,21 +181,24 @@ export class FloorArRuntime {
     this.onStatus({ kind: "no-floor" });
   }
 
-  async placeAtReticle(): Promise<boolean> {
-    if (!this.hasFloor || !this.reticle?.visible || !this.scene) return false;
+  async placeAtReticle(): Promise<{ productId: string; pose: Pose6 } | null> {
+    if (!this.hasFloor || !this.reticle?.visible || !this.scene) return null;
     const piece = this.getPiece();
-    if (!piece) return false;
+    if (!piece) return null;
     const root = await loadCatalogGlb(piece.product);
     this.lastHitMatrix.decompose(root.position, root.quaternion, this.scratchScale);
     root.scale.setScalar(piece.scale);
     this.scene.add(root);
     this.placed.push(root);
+    const pose = matrixToPose6(this.lastHitMatrix);
     this.onStatus({
       kind: "placed",
       name: piece.product.name,
       count: this.placed.length,
     });
-    return true;
+    const result = { productId: piece.product.id, pose };
+    this.onPlaced?.(result);
+    return result;
   }
 
   undo(): void {
