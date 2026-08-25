@@ -40,7 +40,7 @@ export type FeatureId =
   | "pet-friendly"
   | "layered-lighting";
 
-export type RoomSource = "sample" | "upload";
+export type RoomSource = "sample" | "upload" | "camera";
 
 export interface Room {
   id: string;

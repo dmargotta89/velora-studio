@@ -8,6 +8,11 @@ const SpatialStage = lazy(async () => {
   return { default: mod.SpatialStage };
 });
 
+const ArControls = lazy(async () => {
+  const mod = await import("./ArControls");
+  return { default: mod.ArControls };
+});
+
 export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const room = studio.state.room;
   const [walkIndex, setWalkIndex] = useState(0);
@@ -17,6 +22,12 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
   const count = studio.placedProducts.length;
   const safeIndex = count === 0 ? 0 : ((walkIndex % count) + count) % count;
   const walkItem = studio.placedProducts[safeIndex];
+  const captureLine =
+    room.source === "camera"
+      ? "Camera frame"
+      : room.source === "upload"
+        ? "Uploaded photo"
+        : "Sample photo";
 
   return (
     <div className="canvas-wrap">
@@ -33,7 +44,7 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
         </Suspense>
         <div className="preview-badge">
           <span>PREVIEW</span>
-          Spatial walkthrough of a photo-based room — not live AR, not a LiDAR scan
+          {captureLine} · 3D stage, not LiDAR · AR only on a compatible device
         </div>
         {studio.walkthrough && walkItem ? (
           <div className="walkthrough" onClick={() => studio.setWalkthrough(false)}>
@@ -51,13 +62,13 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
               </p>
               <h2>{walkItem.product.name}</h2>
               <p>
-                First-person pass through the staged room. In the full product you
-                walk this look with the retailer&apos;s AR model. This camera path
-                is a preview only — {walkItem.product.retailer},{" "}
-                {money(walkItem.product.price)},{" "}
+                First-person pass through the staged room. This is the non-AR path.
+                On-device AR is a separate WebXR session when the device supports
+                immersive-ar and floor hit-test. {walkItem.product.retailer},{" "}
+                {money(walkItem.product.price)}, mocked catalog
                 {walkItem.product.arCapable
-                  ? "mocked as AR-capable."
-                  : "photo reference, no AR model yet."}
+                  ? " — flagged as AR-capable, not a live store SDK."
+                  : " — photo reference, no AR model yet."}
               </p>
               <div className="walk-actions">
                 <button
@@ -87,9 +98,10 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
           <p className="look-line">{lookSummary(studio.state.taste)}</p>
           <p className="look-hint">
             Click a piece to select, then drag it. Drag empty space to look around.
+            PREVIEW stays the path unless WebXR AR actually starts.
           </p>
         </div>
-        <div className="inline">
+        <div className="inline canvas-bar-actions">
           <button className="btn ghost small" onClick={studio.refreshLook}>
             Reset placements
           </button>
@@ -105,6 +117,9 @@ export function RoomCanvas({ studio }: { studio: StudioModel }) {
           >
             Preview walkthrough
           </button>
+          <Suspense fallback={<span className="ar-check">Checking WebXR…</span>}>
+            <ArControls studio={studio} />
+          </Suspense>
         </div>
       </div>
     </div>
