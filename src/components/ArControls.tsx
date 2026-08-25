@@ -45,6 +45,10 @@ export function ArControls({ studio }: { studio: StudioModel }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (studio.walkthrough) setWhy(false);
+  }, [studio.walkthrough]);
+
   const pieces = studio.placedProducts;
   const selected = pieces.find((item) => item.product.id === pieceId) ?? pieces[0];
   pieceRef.current = selected;
