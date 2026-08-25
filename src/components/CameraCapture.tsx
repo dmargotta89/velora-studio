@@ -1,77 +1,84 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  attachCameraStream,
+  openCameraStream,
+  stopStream,
+  waitForVideoFrame,
+} from "../lib/camera";
 import { cameraErrorMessage, videoFrameToRoomDataUrl } from "../lib/image";
-import { uid } from "../lib/ids";
-import type { Room, RoomKind } from "../types";
+import type { Pose6, RoomKind } from "../types";
+
+export interface CapturedFrame {
+  imageSrc: string;
+  pose: Pose6 | null;
+}
 
 export function CameraCapture({
   kind,
-  onCapture,
+  initialStream,
+  initialError,
+  onCommit,
   onCancel,
 }: {
   kind: RoomKind;
-  onCapture: (room: Room) => void;
+  initialStream: MediaStream | null;
+  initialError: string | null;
+  onCommit: (frames: CapturedFrame[]) => void;
   onCancel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const streamRef = useRef<MediaStream | null>(initialStream);
+  const [error, setError] = useState<string | null>(initialError);
   const [ready, setReady] = useState(false);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
   const [busy, setBusy] = useState(false);
+  const [frames, setFrames] = useState<CapturedFrame[]>([]);
+  const [status, setStatus] = useState("Opening camera…");
 
   useEffect(() => {
+    return () => stopStream(streamRef.current);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream || error) return;
     let cancelled = false;
-    setReady(false);
-    setError(null);
-
-    async function start() {
-      if (!window.isSecureContext) {
-        setError(cameraErrorMessage(new Error("insecure context")));
-        return;
-      }
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setError(cameraErrorMessage(new Error("getUserMedia missing")));
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: facing },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
+    attachCameraStream(video, stream);
+    setStatus("Waiting for a live frame…");
+    void waitForVideoFrame(video)
+      .then(() => {
+        if (!cancelled) {
+          setReady(true);
+          setStatus("Live camera · capture a frame of the room");
         }
-        streamRef.current = stream;
-        const video = videoRef.current;
-        if (video) {
-          video.srcObject = stream;
-          await video.play().catch(() => undefined);
-        }
-        setReady(true);
-      } catch (caught) {
+      })
+      .catch((caught) => {
         if (!cancelled) setError(cameraErrorMessage(caught));
-      }
-    }
-
-    void start();
-
+      });
     return () => {
       cancelled = true;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      const video = videoRef.current;
-      if (video) video.srcObject = null;
     };
-  }, [facing]);
+  }, [error]);
 
-  function stopStream() {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+  async function startCamera(nextFacing: "environment" | "user") {
+    setError(null);
+    setReady(false);
+    setStatus("Opening camera…");
+    stopStream(streamRef.current);
     streamRef.current = null;
+    try {
+      const stream = await openCameraStream(nextFacing);
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (!video) throw new Error("Camera preview is not ready.");
+      attachCameraStream(video, stream);
+      await waitForVideoFrame(video);
+      setReady(true);
+      setStatus("Live camera · capture a frame of the room");
+    } catch (caught) {
+      setError(cameraErrorMessage(caught));
+    }
   }
 
   function capture() {
@@ -80,23 +87,24 @@ export function CameraCapture({
     setBusy(true);
     try {
       const imageSrc = videoFrameToRoomDataUrl(video);
-      stopStream();
-      onCapture({
-        id: uid("room"),
-        name: "Camera capture",
-        kind,
-        imageSrc,
-        source: "camera",
-        note: "Captured from this device camera as a photo frame. Not a LiDAR mesh.",
-      });
+      setFrames((current) => [...current, { imageSrc, pose: null }]);
+      setStatus(`Captured ${frames.length + 1} camera frame${frames.length === 0 ? "" : "s"} · not LiDAR`);
     } catch (caught) {
-      setBusy(false);
       setError(
         caught instanceof Error
           ? caught.message
           : "Could not grab a frame from the camera.",
       );
+    } finally {
+      setBusy(false);
     }
+  }
+
+  function commit() {
+    if (frames.length === 0) return;
+    stopStream(streamRef.current);
+    streamRef.current = null;
+    onCommit(frames);
   }
 
   return (
@@ -104,7 +112,7 @@ export function CameraCapture({
       <div className="camera-panel">
         <div className="camera-head">
           <div>
-            <p className="eyebrow">Device camera · not LiDAR</p>
+            <p className="eyebrow">Mode · Camera frame · not LiDAR</p>
             <h2>Capture a room frame</h2>
           </div>
           <button className="btn ghost small" onClick={onCancel}>
@@ -112,15 +120,22 @@ export function CameraCapture({
           </button>
         </div>
         <p className="muted">
-          This uses getUserMedia to take a photo or video frame of the room. It is
-          not a LiDAR or 3D mesh. The frame stays on this device.
+          This is getUserMedia — a photo or video frame of the {kind} room. It is
+          not a LiDAR mesh and we do not invent camera poses from the picture.
+          Capture one or more frames, then open the room. The AR version saves on
+          this device.
         </p>
         {error ? (
           <div className="camera-blocker">
             <p>{error}</p>
-            <button className="btn small" onClick={onCancel}>
-              Use upload or a sample instead
-            </button>
+            <div className="camera-actions">
+              <button className="btn small" onClick={() => void startCamera(facing)}>
+                Try camera again
+              </button>
+              <button className="btn ghost small" onClick={onCancel}>
+                Use upload or a sample instead
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -132,8 +147,16 @@ export function CameraCapture({
                 autoPlay
                 aria-label="Live camera preview"
               />
-              {!ready ? <span className="camera-waiting">Opening camera…</span> : null}
+              {!ready ? <span className="camera-waiting">{status}</span> : null}
             </div>
+            <p className="camera-status">{status}</p>
+            {frames.length > 0 ? (
+              <div className="camera-thumbs">
+                {frames.map((frame, index) => (
+                  <img key={frame.imageSrc.slice(-24) + index} src={frame.imageSrc} alt={`Captured frame ${index + 1}`} />
+                ))}
+              </div>
+            ) : null}
             <div className="camera-actions">
               <button className="btn" disabled={!ready || busy} onClick={capture}>
                 Capture frame
@@ -141,11 +164,16 @@ export function CameraCapture({
               <button
                 className="btn ghost"
                 disabled={busy}
-                onClick={() =>
-                  setFacing((current) => (current === "environment" ? "user" : "environment"))
-                }
+                onClick={() => {
+                  const next = facing === "environment" ? "user" : "environment";
+                  setFacing(next);
+                  void startCamera(next);
+                }}
               >
                 Flip camera
+              </button>
+              <button className="btn" disabled={frames.length === 0} onClick={commit}>
+                Open room with {frames.length || "no"} frame{frames.length === 1 ? "" : "s"}
               </button>
             </div>
           </>
